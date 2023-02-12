@@ -1,0 +1,190 @@
+Parameters:
+  LatestAmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
+
+Resources:
+  # Create VPC Network
+  ApplicationNetwork:
+    Type: AWS::EC2::VPC
+    Properties: 
+      CidrBlock: 10.0.0.0/16
+
+  # Create Subnet
+  RAID50Subnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref ApplicationNetwork
+      CidrBlock: 10.0.0.0/24
+      AvailabilityZone: ap-southeast-1a
+
+  # Create Internet Gateway
+  NetworkInternetGateway:
+    Type: AWS::EC2::InternetGateway
+
+  # Attach Internet Gateway to VPC
+  NetworkInternetGatewayAssociation:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties: 
+      InternetGatewayId: !Ref NetworkInternetGateway
+      VpcId: !Ref ApplicationNetwork
+
+  # Create Route Table
+  NetworkRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties: 
+      VpcId: !Ref ApplicationNetwork
+
+  # Create Route to public internet
+  InternetRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref NetworkRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref NetworkInternetGateway
+
+  # Associate Route Table with Subnet
+  RouteTableSubnetAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties: 
+      RouteTableId: !Ref NetworkRouteTable
+      SubnetId: !Ref RAID50Subnet
+
+  # Create Security Group to allow http & SSH traffic
+  RAID50SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: RAID50 Security Group
+      GroupDescription: Allow http & SSH to client host
+      VpcId: !Ref ApplicationNetwork
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 3.0.5.32/29
+
+  # Create RAID50 server
+  RAID50Server:
+    Type: AWS::EC2::Instance
+    Properties: 
+      InstanceType: t2.micro
+      ImageId: !Ref LatestAmiId
+  #    KeyName: !Ref SSHKeys
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: 'true'
+          DeviceIndex: '0'
+          GroupSet: 
+            - !Ref RAID50SecurityGroup
+          SubnetId: !Ref RAID50Subnet
+
+  # Create SSH Keys for RAID50 server
+  # SSHKeys:
+  #   Type: AWS::EC2::KeyPair
+  #   Properties:
+  #     KeyName: RAID50-SSHKeys
+  #     KeyType: rsa
+
+  # The following configurations create EBS Volumes for the RAID 50 server
+  # A total of 6 5GB EBS volumes are created in the same AZ as the server
+  # Volumes are attatched to the RAID 50 server but not formated or mounted
+  # Device names are /dev/xvdf, /dev/xvdg, /dev/xvdh, /dev/xvdi, /dev/xvdj, /dev/xvdk
+
+  # Create 1st RAID Volume and attaching it to the RAID 50 server
+  RAIDVolume1:
+    Type: AWS::EC2::Volume
+    Properties:
+      AvailabilityZone: !GetAtt RAID50Server.AvailabilityZone
+      Encrypted: false
+      Size: 5
+      VolumeType: gp2
+
+  RAIDVolume1Attachment:
+    Type: AWS::EC2::VolumeAttachment
+    Properties: 
+      Device: /dev/xvdf
+      InstanceId: !Ref RAID50Server
+      VolumeId: !Ref RAIDVolume1
+
+  # Create 2nd RAID Volume and attaching it to the RAID 50 server
+  RAIDVolume2:
+    Type: AWS::EC2::Volume
+    Properties:
+      AvailabilityZone: !GetAtt RAID50Server.AvailabilityZone
+      Encrypted: false
+      Size: 5
+      VolumeType: gp2
+
+  RAIDVolume2Attachment:
+    Type: AWS::EC2::VolumeAttachment
+    Properties: 
+      Device: /dev/xvdg
+      InstanceId: !Ref RAID50Server
+      VolumeId: !Ref RAIDVolume2
+
+  # Create 3rd RAID Volume and attaching it to the RAID 50 server
+  RAIDVolume3:
+    Type: AWS::EC2::Volume
+    Properties:
+      AvailabilityZone: !GetAtt RAID50Server.AvailabilityZone
+      Encrypted: false
+      Size: 5
+      VolumeType: gp2
+
+  RAIDVolume3Attachment:
+    Type: AWS::EC2::VolumeAttachment
+    Properties: 
+      Device: /dev/xvdh
+      InstanceId: !Ref RAID50Server
+      VolumeId: !Ref RAIDVolume3
+
+  # Create 4th RAID Volume and attaching it to the RAID 50 server
+  RAIDVolume4:
+    Type: AWS::EC2::Volume
+    Properties:
+      AvailabilityZone: !GetAtt RAID50Server.AvailabilityZone
+      Encrypted: false
+      Size: 5
+      VolumeType: gp2
+
+  RAIDVolume4Attachment:
+    Type: AWS::EC2::VolumeAttachment
+    Properties: 
+      Device: /dev/xvdi
+      InstanceId: !Ref RAID50Server
+      VolumeId: !Ref RAIDVolume4
+
+  # Create 5th RAID Volume and attaching it to the RAID 50 server
+  RAIDVolume5:
+    Type: AWS::EC2::Volume
+    Properties:
+      AvailabilityZone: !GetAtt RAID50Server.AvailabilityZone
+      Encrypted: false
+      Size: 5
+      VolumeType: gp2
+
+  RAIDVolume5Attachment:
+    Type: AWS::EC2::VolumeAttachment
+    Properties: 
+      Device: /dev/xvdj
+      InstanceId: !Ref RAID50Server
+      VolumeId: !Ref RAIDVolume5
+
+  # Create 6th RAID Volume and attaching it to the RAID 50 server
+  RAIDVolume6:
+    Type: AWS::EC2::Volume
+    Properties:
+      AvailabilityZone: !GetAtt RAID50Server.AvailabilityZone
+      Encrypted: false
+      Size: 5
+      VolumeType: gp2
+
+  RAIDVolume6Attachment:
+    Type: AWS::EC2::VolumeAttachment
+    Properties: 
+      Device: /dev/xvdk
+      InstanceId: !Ref RAID50Server
+      VolumeId: !Ref RAIDVolume6
